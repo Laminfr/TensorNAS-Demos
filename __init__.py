@@ -273,6 +273,90 @@ def load_globals_from_config(config):
         tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # FATAL
 
+def load_3Dglobals_from_config(config):
+    from TensorNAS.Tools.ConfigParse import (
+        GetBlockArchitecture,
+        GetClassCount,
+        GetLog,
+        GetVerbose,
+        GetMultithreaded,
+        GetDistributed,
+        GetDatasetModule,
+        GetUseDatasetDirectory,
+        GetDatasetDirectory,
+        GetLocalDataset,
+        GetGenBlockArchitecture,
+        GetThreadCount,
+        GetGPU,
+        GetSaveIndividual,
+        GetFilterFunction,
+        Get3DFilterFunctionArgs,
+        GetUseGoalAttainment,
+        GetWeights,
+        GetFigureTitle,
+    )
+    from TensorNAS.Tools.JSONImportExport import GetBlockMod
+
+    globals()["ba_name"] = GetBlockArchitecture(config)
+    globals()["class_count"] = GetClassCount(config)
+    globals()["ba_mod"] = GetBlockMod(globals()["ba_name"])
+    globals()["log"] = GetLog(config)
+    globals()["verbose"] = GetVerbose(config)
+    globals()["multithreaded"] = GetMultithreaded(config)
+    globals()["distributed"] = GetDistributed(config)
+    dm = GetDatasetModule(config)
+    globals()["dataset_directory"] = ""
+    if GetUseDatasetDirectory(config):
+        globals()["dataset_directory"] = GetDatasetDirectory(config)
+    components = dm.split(".")
+    dm = __import__(dm)
+    for comp in components[1:]:
+        dm = getattr(dm, comp)
+    globals()["dataset_module"] = dm
+    globals()["local_dataset"] = GetLocalDataset(config)
+    gba = GetGenBlockArchitecture(config)
+    components = gba.split(".")
+    # fund = components[-1]
+    module = ".".join(components[:-1])
+    gba = __import__(module)
+    for comp in components[1:-1]:
+        gba = getattr(gba, comp)
+    globals()["gen_block_architecture"] = eval("gba.{}".format(components[-1]))
+    globals()["thread_count"] = GetThreadCount(config)
+    globals()["use_gpu"] = GetGPU(config)
+    globals()["save_individuals"] = GetSaveIndividual(config)
+    globals()["filter_function"] = GetFilterFunction(config)
+    globals()["filter_function_args"] = Get3DFilterFunctionArgs(config)
+    globals()["use_goal_attainment"] = GetUseGoalAttainment(config)
+    globals()["weights"] = GetWeights(config)
+    globals()["comments"] = GetFigureTitle(config)
+
+    if globals()["use_gpu"]:
+        from TensorNAS.Tools.TensorFlow import GPU as GPU
+
+        GPU.config_GPU()
+    else:
+        # import os
+        #
+        # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+        try:
+            import tensorflow as tf
+
+            # Disable all GPUS
+            tf.config.set_visible_devices([], "GPU")
+            visible_devices = tf.config.get_visible_devices()
+            for device in visible_devices:
+                assert device.device_type != "GPU"
+        except Exception as e:
+            raise e
+
+    if not globals()["verbose"]:
+        import os
+        import tensorflow as tf
+
+        print("Suppressing verbosity")
+        tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+        os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # FATAL
 
 class DataGenerator(tf.keras.utils.Sequence):
     """
