@@ -64,9 +64,13 @@ def GetData(dataset_dir):
     if not len(os.listdir(output_dir)):
         for z in [dataset_train_zip, dataset_val_zip]:
             print("Extracting VisualWakeWord zip")
-
-            with zipfile.ZipFile(zip_dir + "/{}".format(z), "r") as zip_ref:
-                zip_ref.extractall(path=output_dir)
+            try:
+                with zipfile.ZipFile(zip_dir + "/{}".format(z), "r") as zip_ref:
+                    zip_ref.extractall(path=output_dir)
+            except zipfile.BadZipFile:
+                print("The file is not a zip file or it is corrupted.")
+            except Exception as e:
+                print(f"An error occurred: {e}")
 
             out_subdirs = [f.path for f in os.scandir(output_dir) if os.path.isdir(f)]
 
@@ -194,7 +198,7 @@ def GetData(dataset_dir):
         annFile=os.path.join(annotations_output_dir, "instances_train.json"),
     )
     test_dataset = pyvww.pytorch.VisualWakeWordsClassification(
-        root=output_dir + "/val2014",
+        root=output_dir,
         annFile=os.path.join(annotations_output_dir, "instances_val.json"),
     )
 
@@ -217,7 +221,7 @@ def GetData(dataset_dir):
 
         cur_dataset_len = len(eval("{}".format(cur_dataset)))
 
-        locals()["{}_len".format(cur_dataset)] = cur_dataset_len // batch_size
+        locals()["{}_len".format(cur_dataset)] = cur_dataset_len
 
         import sys
 
