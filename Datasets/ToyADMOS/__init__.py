@@ -163,6 +163,14 @@ def GetData(dataset_dir):
 
     test_data, test_labels = _GetTestData()
 
+    # create representative_dataset generator for tflite quantization
+    from Demos import set_global
+    import numpy as np    
+    def quantization_gen():
+        for i in range(500):
+            yield [np.array(np.float32(train_data[i:i+1]))]
+    set_global("quantization_gen",quantization_gen)
+
     return {
         "train_data": data_set_x,
         "train_labels": data_set_x,
